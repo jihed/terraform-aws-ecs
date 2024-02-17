@@ -156,7 +156,6 @@ resource "aws_ecs_service" "this" {
         for_each = try([service_connect_configuration.value.service], [])
 
         content {
-
           dynamic "client_alias" {
             for_each = try([service.value.client_alias], [])
 
@@ -164,6 +163,32 @@ resource "aws_ecs_service" "this" {
               dns_name = try(client_alias.value.dns_name, null)
               port     = client_alias.value.port
             }
+          }
+
+          dynamic "timeout" {
+            for_each = try([service.value.timeout], [])
+
+            content {
+              idle_timeout_seconds        = timeout.value.idle_timeout_seconds
+              per_request_timeout_seconds = timeout.value.per_request_timeout_seconds
+            }
+          }
+
+          dynamic "tls" {
+            for_each = try([service.value.tls], [])
+
+            content {
+              dynamic "issuer_cert_authority" {
+                for_each = try([tls.value.issuer_cert_authority], [])
+
+                content {
+                  aws_pca_authority_arn = try(issuer_cert_authority.value.aws_pca_authority_arn, null)
+                }
+              }
+              kms_key  = tls.value.kms_key
+              role_arn = tls.value.role_arn
+            }
+
           }
 
           discovery_name        = try(service.value.discovery_name, null)

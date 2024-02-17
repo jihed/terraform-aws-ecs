@@ -131,48 +131,64 @@ module "ecs_service" {
         port     = local.container_port
         dns_name = local.container_name
       }
+
+      timeout = {
+        idle_timeout_seconds        = "100"
+        per_request_timeout_seconds = "100"
+      }
+      tls = {
+        issuer_cert_authority = {
+          acm_pca_arn = aws_acmpca_certificate_authority.example.arn
+        }
+        kms_key  = module.secrets_kms_key.key_arn
+        role_arn = aws_iam_role.ecs_service_connect_role.arn
+      }
+
       port_name      = local.container_name
       discovery_name = local.container_name
     }
-  }
 
-  load_balancer = {
-    service = {
-      target_group_arn = module.alb.target_groups["ex_ecs"].arn
-      container_name   = local.container_name
-      container_port   = local.container_port
+    load_balancer = {
+      service = {
+        target_group_arn = module.alb.target_groups["ex_ecs"].arn
+        container_name   = local.container_name
+        container_port   = local.container_port
+      }
     }
-  }
 
-  subnet_ids = module.vpc.private_subnets
-  security_group_rules = {
-    alb_ingress_3000 = {
-      type                     = "ingress"
-      from_port                = local.container_port
-      to_port                  = local.container_port
-      protocol                 = "tcp"
-      description              = "Service port"
-      source_security_group_id = module.alb.security_group_id
+    subnet_ids = module.vpc.private_subnets
+    security_group_rules = {
+      alb_ingress_3000 = {
+        type                     = "ingress"
+        from_port                = local.container_port
+        to_port                  = local.container_port
+        protocol                 = "tcp"
+        description              = "Service port"
+        source_security_group_id = module.alb.security_group_id
+      }
+      egress_all = {
+        type        = "egress"
+        from_port   = 0
+        to_port     = 0
+        protocol    = "-1"
+        cidr_blocks = ["0.0.0.0/0"]
+      }
     }
-    egress_all = {
-      type        = "egress"
-      from_port   = 0
-      to_port     = 0
-      protocol    = "-1"
-      cidr_blocks = ["0.0.0.0/0"]
+
+    service_tags = {
+      "ServiceTag" = "Tag on service level"
     }
-  }
 
-  service_tags = {
-    "ServiceTag" = "Tag on service level"
+    tags = local.tags
   }
-
-  tags = local.tags
 }
 
 ################################################################################
 # Supporting Resources
 ################################################################################
+
+
+data "aws_partition" "current" {}
 
 data "aws_ssm_parameter" "fluentbit" {
   name = "/aws/service/aws-for-fluent-bit/stable"
