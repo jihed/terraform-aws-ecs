@@ -131,6 +131,8 @@ module "ecs_service" {
     }
   }
 
+  
+
   subnet_ids = module.vpc.private_subnets
   security_group_rules = {
     alb_http_ingress = {

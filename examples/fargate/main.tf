@@ -6,10 +6,10 @@ data "aws_availability_zones" "available" {}
 
 locals {
   region = "eu-west-1"
-  name   = "ex-${basename(path.cwd)}"
+  name   = "sample"
 
-  vpc_cidr = "10.0.0.0/16"
-  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
+  vpc_cidr = "10.12.0.0/16"
+  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
 
   container_name = "ecsdemo-frontend"
   container_port = 3000
@@ -133,9 +133,10 @@ module "ecs_service" {
       }
 
       timeout = {
-        idle_timeout_seconds        = "100"
-        per_request_timeout_seconds = "100"
+        idle_timeout_seconds        = "1000"
+        per_request_timeout_seconds = "1000"
       }
+
       tls = {
         issuer_cert_authority = {
           acm_pca_arn = aws_acmpca_certificate_authority.example.arn
@@ -146,42 +147,43 @@ module "ecs_service" {
 
       port_name      = local.container_name
       discovery_name = local.container_name
-    }
+  } }
 
-    load_balancer = {
-      service = {
-        target_group_arn = module.alb.target_groups["ex_ecs"].arn
-        container_name   = local.container_name
-        container_port   = local.container_port
-      }
+  load_balancer = {
+    service = {
+      target_group_arn = module.alb.target_groups["ex_ecs"].arn
+      container_name   = local.container_name
+      container_port   = local.container_port
     }
-
-    subnet_ids = module.vpc.private_subnets
-    security_group_rules = {
-      alb_ingress_3000 = {
-        type                     = "ingress"
-        from_port                = local.container_port
-        to_port                  = local.container_port
-        protocol                 = "tcp"
-        description              = "Service port"
-        source_security_group_id = module.alb.security_group_id
-      }
-      egress_all = {
-        type        = "egress"
-        from_port   = 0
-        to_port     = 0
-        protocol    = "-1"
-        cidr_blocks = ["0.0.0.0/0"]
-      }
-    }
-
-    service_tags = {
-      "ServiceTag" = "Tag on service level"
-    }
-
-    tags = local.tags
   }
+
+  subnet_ids = module.vpc.private_subnets
+
+  security_group_rules = {
+    alb_ingress_3000 = {
+      type                     = "ingress"
+      from_port                = local.container_port
+      to_port                  = local.container_port
+      protocol                 = "tcp"
+      description              = "Service port"
+      source_security_group_id = module.alb.security_group_id
+    }
+    egress_all = {
+      type        = "egress"
+      from_port   = 0
+      to_port     = 0
+      protocol    = "-1"
+      cidr_blocks = ["0.0.0.0/0"]
+    }
+  }
+
+  service_tags = {
+    "ServiceTag" = "Tag on service level"
+  }
+
+  tags = local.tags
 }
+
 
 ################################################################################
 # Supporting Resources
@@ -272,7 +274,7 @@ module "alb" {
 
 module "vpc" {
   source  = "terraform-aws-modules/vpc/aws"
-  version = "~> 5.0"
+  version = "~> 5.5.0"
 
   name = local.name
   cidr = local.vpc_cidr
