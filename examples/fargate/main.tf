@@ -6,10 +6,10 @@ data "aws_availability_zones" "available" {}
 
 locals {
   region = "eu-west-1"
-  name   = "sample"
+  name   = "ex-${basename(path.cwd)}"
 
-  vpc_cidr = "10.12.0.0/16"
-  azs      = slice(data.aws_availability_zones.available.names, 0, 2)
+  vpc_cidr = "10.0.0.0/16"
+  azs      = slice(data.aws_availability_zones.available.names, 0, 3)
 
   container_name = "ecsdemo-frontend"
   container_port = 3000
@@ -147,7 +147,8 @@ module "ecs_service" {
 
       port_name      = local.container_name
       discovery_name = local.container_name
-  } }
+    }
+  }
 
   load_balancer = {
     service = {
@@ -183,7 +184,6 @@ module "ecs_service" {
 
   tags = local.tags
 }
-
 
 ################################################################################
 # Supporting Resources
